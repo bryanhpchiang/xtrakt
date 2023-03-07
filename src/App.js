@@ -8,6 +8,7 @@ function App() {
   const [attr, setAttr] = useState("");
   const [url, setUrl] = useState("");
   const [sk, setSK] = useState("");
+  const [hide, setHide] = useState(false);
 
   useEffect(() => {
     // console.log(results);
@@ -25,18 +26,21 @@ function App() {
             <label
               htmlFor="email"
               className="block text-sm font-medium text-gray-700"
+              onClick={() => setHide(!hide)}
             >
               openai key
             </label>
-            <div className="mt-1">
-              <input
-                value={sk}
-                onChange={(e) => setSK(e.target.value)}
-                type="text"
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                placeholder="sk-[....]"
-              />
-            </div>
+            {!hide && (
+              <div className="mt-1">
+                <input
+                  value={sk}
+                  onChange={(e) => setSK(e.target.value)}
+                  type="text"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  placeholder="sk-[....]"
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -91,6 +95,7 @@ function App() {
                 body: JSON.stringify({
                   url,
                   attributes: attr,
+                  sk,
                 }),
               }
             ).then((r) => r.json());

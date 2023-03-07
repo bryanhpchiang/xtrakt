@@ -5,6 +5,7 @@ import re
 import modal
 from langchain.text_splitter import TokenTextSplitter
 import openai
+import os
 
 
 stub = modal.Stub("xtrakt")
@@ -22,7 +23,7 @@ class Item(BaseModel):
 @stub.webhook(method="POST", image=image)
 def process(item: Item):
     try:
-        results = extract.call(item.url, item.attributes)
+        results = extract.call(item.url, item.attributes, item.sk)
     except Exception as e:
         return {
             "error": str(e),
@@ -37,7 +38,7 @@ def flatten(l):
 
 
 @stub.function(image=image)
-def extract(url, attributes):
+def extract(url, attributes, sk):
     text = get_text.call(url)
     # chunk it up
     text_splitter = TokenTextSplitter(chunk_size=3000, chunk_overlap=200)
@@ -47,16 +48,18 @@ def extract(url, attributes):
     # just in case the webpage is really long
     chunks = chunks[:10]
 
-    results = list(extract_chunk.map([(c, attributes) for c in chunks]))
+    results = list(extract_chunk.map([(c, attributes, sk) for c in chunks]))
     results = flatten([r.split("\n") for r in results])
     print(results)
 
     return results
 
 
-@stub.function(image=image, secret=modal.Secret.from_name("openai"))
+@stub.function(image=image)
 def extract_chunk(inp):
-    chunk, attributes = inp
+    chunk, attributes, sk = inp
+    # bruh
+    openai.api_key = sk
     prompt = f"""{chunk}
 
 Extract the following columns from the text above. If the column value is unknown or missing, leave it blank.
@@ -87,12 +90,13 @@ def get_text(url):
 
 
 if __name__ == "__main__":
+    # for developing locally
     with stub.run():
-        url = "https://www.missionpeakpediatricdentistry.com/"
-        attributes = "company_name,phone_number,location_name,street_1,street_2,city,state,zip,country,email_2,fax_number"
         url = "https://en.wikipedia.org/wiki/The_Diamond_Age"
         attributes = "invention_name|description"
+        sk = os.environ["OPENAI_API_KEY"]
         result = extract.call(
             url,
             attributes,
+            sk,
         )
